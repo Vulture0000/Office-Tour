@@ -27,6 +27,7 @@ from .api import (
     routes_entities,
     routes_graph,
     routes_knowledge,
+    routes_office,
 )
 from .config import get_settings
 from .graph.client import GraphUnavailable, get_store
@@ -106,6 +107,7 @@ app.include_router(routes_knowledge.router)
 app.include_router(routes_graph.router)
 app.include_router(routes_chat.router)
 app.include_router(routes_actions.router)
+app.include_router(routes_office.router)
 
 
 @app.exception_handler(GraphUnavailable)
