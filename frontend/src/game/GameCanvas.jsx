@@ -16,8 +16,8 @@ export default function GameCanvas({ context, onContextChange, focusTrigger }) {
 
     const config = {
       type: Phaser.AUTO,
-      width: container.clientWidth,
-      height: container.clientHeight,
+      width: container.clientWidth || 800,
+      height: container.clientHeight || 600,
       parent: container,
       backgroundColor: '#020617',
       physics: {
@@ -34,13 +34,13 @@ export default function GameCanvas({ context, onContextChange, focusTrigger }) {
     gameRef.current = game
 
     const resize = () => {
-      if (game && game.canvas) {
+      if (game && game.canvas && container) {
         game.scale.resize(container.clientWidth, container.clientHeight)
       }
     }
     window.addEventListener('resize', resize)
 
-    game.events.once('ready', () => {
+    setTimeout(() => {
       const scene = game.scene.getScene('OfficeScene')
       sceneRef.current = scene
       if (scene) {
@@ -58,7 +58,7 @@ export default function GameCanvas({ context, onContextChange, focusTrigger }) {
           }
         })
       }
-    })
+    }, 0)
 
     return () => {
       window.removeEventListener('resize', resize)
@@ -69,5 +69,5 @@ export default function GameCanvas({ context, onContextChange, focusTrigger }) {
     }
   }, [onContextChange])
 
-  return <div ref={containerRef} id="game-container" className="absolute inset-0" />
+  return <div ref={containerRef} id="game-container" className="absolute inset-0 h-full w-full" />
 }
