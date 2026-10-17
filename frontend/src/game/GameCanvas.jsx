@@ -44,7 +44,7 @@ export default function GameCanvas({ context, onContextChange, focusTrigger }) {
       const scene = game.scene.getScene('OfficeScene')
       sceneRef.current = scene
       if (scene) {
-        if (officeData && officeData.rooms && officeData.rooms[0]) {
+        if (officeData && officeData.rooms && officeData.rooms.length > 0) {
           scene.start('OfficeScene', { officeData, roomData: officeData.rooms[0] })
         }
         scene.events.on('room:enter', (data) => {
@@ -68,11 +68,6 @@ export default function GameCanvas({ context, onContextChange, focusTrigger }) {
       }
     }
   }, [onContextChange])
-
-  useEffect(() => {
-    const scene = sceneRef.current
-    if (!scene || !focusTrigger) return
-  }, [focusTrigger])
 
   return <div ref={containerRef} id="game-container" className="absolute inset-0" />
 }
