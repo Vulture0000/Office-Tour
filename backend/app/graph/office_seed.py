@@ -1,5 +1,4 @@
 from .client import get_store
-from .schema import validate_node_labels, validate_relationship_types
 
 
 def seed_office() -> None:
