@@ -1,21 +1,10 @@
-import json
-import os
-from typing import Any, Dict
-
-from .client import get_graph
+from .client import get_store
 from .schema import validate_node_labels, validate_relationship_types
 
-OFFICE_DATA = {
-  'nodes': [],
-  'edges': []
-}
-
-def load_office_data() -> Dict[str, Any]:
-  return OFFICE_DATA
 
 def seed_office() -> None:
-  graph = get_graph()
-  data = load_office_data()
+  store = get_store()
+  graph = store
 
   # Add rooms
   rooms = [
