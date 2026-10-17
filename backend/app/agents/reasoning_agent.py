@@ -30,6 +30,7 @@ from ..workflows.state import (
     INTENT_PLACE,
     INTENT_PROJECT,
     INTENT_SYSTEM,
+    INTENT_TEAM,
     INTENT_TICKETS,
     BrainState,
 )
@@ -181,6 +182,21 @@ def _build_sources(state: BrainState, store: GraphStore) -> list[dict[str, Any]]
                 "relevance": 0.95,
             }
         )
+    if evidence.get("team"):
+        team = evidence["team"]
+        sources.append(
+            {
+                "id": team.get("id"),
+                "type": "graph",
+                "title": f"Company graph · Team: {team.get('name')}",
+                "doc_type": "Team",
+                "author": team.get("department", {}).get("name", "") if team.get("department") else "",
+                "date": "",
+                "excerpt": ", ".join(m["name"] for m in team.get("members", [])[:5]),
+                "heading": "",
+                "relevance": 0.9,
+            }
+        )
     # Deduplicate by (type, id), keeping the highest relevance.
     best: dict[tuple[str, str], dict[str, Any]] = {}
     for source in sources:
@@ -218,7 +234,7 @@ def _confidence(state: BrainState, sources: list[dict[str, Any]]) -> float:
     evidence = state.get("evidence", {}) or {}
     if not any(
         evidence.get(key)
-        for key in ("person", "project", "decision", "documents", "tickets", "people_ranked", "place")
+        for key in ("person", "project", "decision", "documents", "tickets", "people_ranked", "place", "team")
     ):
         score = min(score, 0.3)
     return round(min(0.98, score), 2)
@@ -531,6 +547,15 @@ def _system_answer(state: BrainState) -> str:
     return "I could not find that system in the company graph."
 
 
+def _team_answer(state: BrainState) -> str:
+    evidence = state.get("evidence", {}) or {}
+    team = evidence.get("team")
+    if not team:
+        return "I could not find that team in the company graph."
+    facts = [f for f in evidence.get("facts", []) if "knowledge graph holds" not in f]
+    return "\n".join(facts) if facts else f"{team['name']} is a team at NovaTech."
+
+
 def _place_answer(state: BrainState) -> str:
     evidence = state.get("evidence", {}) or {}
     facts = evidence.get("facts", [])
@@ -595,6 +620,7 @@ def run(state: BrainState, store: GraphStore, llm: LLMProvider | None = None) ->
         INTENT_TICKETS: _ticket_answer,
         INTENT_SYSTEM: _system_answer,
         INTENT_PLACE: _place_answer,
+        INTENT_TEAM: _team_answer,
         INTENT_GENERAL: _general_answer,
     }
     composer = composers.get(intent, _general_answer)

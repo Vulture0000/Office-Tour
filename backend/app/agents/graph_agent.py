@@ -24,6 +24,7 @@ from ..workflows.state import (
     INTENT_PLACE,
     INTENT_PROJECT,
     INTENT_SYSTEM,
+    INTENT_TEAM,
     INTENT_TICKETS,
     BrainState,
 )
@@ -75,6 +76,7 @@ def run(state: BrainState, store: GraphStore) -> BrainState:
         "system": None,
         "document": None,
         "place": None,
+        "team": None,
         "decisions": [],
         "documents": [],
         "tickets": [],
@@ -95,11 +97,14 @@ def run(state: BrainState, store: GraphStore) -> BrainState:
     system = _first(entities, "System")
     room = _first(entities, "Room")
     office_object = _first(entities, "Object")
+    team = _first(entities, "Team")
 
     if intent == INTENT_PERSON:
         _person_evidence(store, evidence, person, question)
     elif intent == INTENT_PLACE:
         _place_evidence(store, evidence, room, office_object, entities, question)
+    elif intent == INTENT_TEAM:
+        _team_evidence(store, evidence, team, question)
     elif intent == INTENT_PROJECT:
         _project_evidence(store, evidence, project, question)
     elif intent == INTENT_DECISION_WHY:
@@ -558,6 +563,60 @@ def _action_evidence(
     # If the user is standing next to a person but did not name them, use them.
     if not person and not project:
         evidence["facts"] = ["No explicit target found for the requested action."]
+
+
+def _team_evidence(
+    store: GraphStore,
+    evidence: dict[str, Any],
+    team: dict[str, Any] | None,
+    question: str,
+) -> None:
+    """Describe a team: its members, owning department and systems."""
+
+    if not team:
+        _general_evidence(store, evidence, evidence["terms"], None, None)
+        return
+    node = store.get_node(team["id"])
+    if not node:
+        return
+    name = queries.display_name(node)
+    nodes, _ = store.expand(team["id"], depth=1)
+
+    members = sorted(
+        (n for n in nodes if n["label"] == "Person"),
+        key=lambda n: queries.display_name(n),
+    )
+    systems = [n for n in nodes if n["label"] == "System"]
+    departments = [n for n in nodes if n["label"] == "Department"]
+    projects = [n for n in nodes if n["label"] == "Project"]
+
+    facts = [f"{name} is a team at NovaTech."]
+    if departments:
+        facts.append(f"Part of the {queries.display_name(departments[0])} department.")
+    if members:
+        member_text = ", ".join(
+            queries.display_name(m)
+            + (f" ({m['props']['role']})" if m["props"].get("role") else "")
+            for m in members
+        )
+        facts.append(f"Members: {member_text}.")
+    else:
+        facts.append("No members are recorded for this team.")
+    if systems:
+        facts.append("Owns systems: " + ", ".join(queries.display_name(s) for s in systems) + ".")
+    if projects:
+        facts.append("Works on: " + ", ".join(queries.display_name(p) for p in projects) + ".")
+
+    evidence["team"] = {
+        "id": node["id"],
+        "name": name,
+        "members": [queries.summarise(m) for m in members],
+        "systems": [queries.summarise(s) for s in systems],
+        "department": queries.summarise(departments[0]) if departments else None,
+    }
+    evidence["facts"] = facts
+    evidence["graph_node_ids"].append(team["id"])
+    evidence["graph_node_ids"].extend(m["id"] for m in members)
 
 
 def _place_evidence(

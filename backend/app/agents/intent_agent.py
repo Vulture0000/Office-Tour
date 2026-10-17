@@ -28,6 +28,7 @@ from ..workflows.state import (
     INTENT_PLACE,
     INTENT_PROJECT,
     INTENT_SYSTEM,
+    INTENT_TEAM,
     INTENT_TICKETS,
     BrainState,
 )
@@ -271,6 +272,9 @@ def classify_intent(
     # A concrete office place/object is the focus of the question when named.
     if "Room" in labels or "Object" in labels:
         return INTENT_PLACE, 0.82
+    # A team is the focus when named and no person is the subject.
+    if "Team" in labels and "Person" not in labels:
+        return INTENT_TEAM, 0.8
     if WHY_RE.search(question) and DECISION_CHOICE_RE.search(question):
         return INTENT_DECISION, 0.9  # refined to trace when a technology is present
     if DECISION_RE.search(question) or "Decision" in labels:
