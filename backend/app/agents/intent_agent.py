@@ -102,8 +102,22 @@ PROJECT_RE = re.compile(
     re.IGNORECASE,
 )
 SYSTEM_RE = re.compile(
-    r"\b(system|service|server|infrastructure|infra|cluster|database\s+server|"
+    r"\b(system|service|server|infrastructure|infra|cluster|database|"
     r"production|uptime|outage|downtime|deploy\w*|architecture)\b",
+    re.IGNORECASE,
+)
+
+#: Ownership / responsibility questions ("who owns the primary database").
+OWN_RE = re.compile(
+    r"\b(own|owns|owned|owner|responsible|maintains?|hosts?|runs?)\b",
+    re.IGNORECASE,
+)
+
+#: Deictic questions asked inside a dialogue ("who are you?", "what is this?").
+SELF_RE = re.compile(
+    r"\b(who are you|what are you|what do you do|what is your|"
+    r"tell me about (yourself|this|it)|what is this|what'?s this|"
+    r"about this|about yourself|yourself|your role|your job|your name)\b",
     re.IGNORECASE,
 )
 
@@ -299,6 +313,11 @@ def classify_intent(
         return INTENT_ACTION, 0.9
     if EXPERTISE_RE.search(question):
         return INTENT_EXPERTISE, 0.88
+    # Inside a dialogue a deictic question is about the focused NPC/item.
+    if str(context.get("entity_type", "")) in {"npc", "item", "furniture"} and SELF_RE.search(
+        question
+    ):
+        return INTENT_PLACE, 0.8
     # A concrete office place/object is the focus of the question when named.
     if "Room" in labels or "Object" in labels:
         return INTENT_PLACE, 0.82
@@ -311,7 +330,7 @@ def classify_intent(
         return INTENT_DECISION, 0.85
     if TICKET_RE.search(question) or "Ticket" in labels:
         return INTENT_TICKETS, 0.8
-    if "System" in labels and SYSTEM_RE.search(question):
+    if "System" in labels and (SYSTEM_RE.search(question) or OWN_RE.search(question)):
         return INTENT_SYSTEM, 0.8
     if "Person" in labels and (PERSON_RE.search(question) or len(labels) == 1):
         return INTENT_PERSON, 0.85
