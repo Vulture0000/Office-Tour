@@ -66,9 +66,14 @@ async def lifespan(app: FastAPI):
         stats = store.stats()
         if settings.demo_mode and stats.nodes == 0:
             from .graph.seed import seed_graph
+            from .graph.office_seed import seed_office
 
             logger.info("Graph is empty; seeding the NovaTech demo dataset…")
             seed_graph(store, settings)
+            try:
+                seed_office()
+            except Exception:
+                logger.warning("Office seed skipped or failed")
     except GraphUnavailable as exc:
         logger.warning("Graph unavailable at startup: %s", exc)
 
