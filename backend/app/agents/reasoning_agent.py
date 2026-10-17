@@ -32,6 +32,7 @@ from ..workflows.state import (
     INTENT_SYSTEM,
     INTENT_TEAM,
     INTENT_TICKETS,
+    INTENT_LIST,
     BrainState,
 )
 
@@ -195,6 +196,21 @@ def _build_sources(state: BrainState, store: GraphStore) -> list[dict[str, Any]]
                 "excerpt": ", ".join(m["name"] for m in team.get("members", [])[:5]),
                 "heading": "",
                 "relevance": 0.9,
+            }
+        )
+    if evidence.get("listing"):
+        listing = evidence["listing"]
+        sources.append(
+            {
+                "id": f"list:{listing['label'].lower()}",
+                "type": "graph",
+                "title": f"Company graph · All {listing['label']} ({listing['count']})",
+                "doc_type": listing["label"],
+                "author": "",
+                "date": "",
+                "excerpt": ", ".join(i["name"] for i in listing.get("items", [])[:8]),
+                "heading": "",
+                "relevance": 0.85,
             }
         )
     # Deduplicate by (type, id), keeping the highest relevance.
@@ -547,6 +563,15 @@ def _system_answer(state: BrainState) -> str:
     return "I could not find that system in the company graph."
 
 
+def _list_answer(state: BrainState) -> str:
+    evidence = state.get("evidence", {}) or {}
+    listing = evidence.get("listing")
+    if not listing or not listing.get("items"):
+        return "I could not find anything to list in the company graph."
+    facts = [f for f in evidence.get("facts", []) if "knowledge graph holds" not in f]
+    return "\n".join(facts) if facts else f"{listing['count']} {listing['label']} found."
+
+
 def _team_answer(state: BrainState) -> str:
     evidence = state.get("evidence", {}) or {}
     team = evidence.get("team")
@@ -621,6 +646,7 @@ def run(state: BrainState, store: GraphStore, llm: LLMProvider | None = None) ->
         INTENT_SYSTEM: _system_answer,
         INTENT_PLACE: _place_answer,
         INTENT_TEAM: _team_answer,
+        INTENT_LIST: _list_answer,
         INTENT_GENERAL: _general_answer,
     }
     composer = composers.get(intent, _general_answer)

@@ -26,6 +26,7 @@ from ..workflows.state import (
     INTENT_SYSTEM,
     INTENT_TEAM,
     INTENT_TICKETS,
+    INTENT_LIST,
     BrainState,
 )
 
@@ -105,6 +106,8 @@ def run(state: BrainState, store: GraphStore) -> BrainState:
         _place_evidence(store, evidence, room, office_object, entities, question)
     elif intent == INTENT_TEAM:
         _team_evidence(store, evidence, team, question)
+    elif intent == INTENT_LIST:
+        _list_evidence(store, evidence, state.get("list_target", ""), question)
     elif intent == INTENT_PROJECT:
         _project_evidence(store, evidence, project, question)
     elif intent == INTENT_DECISION_WHY:
@@ -617,6 +620,84 @@ def _team_evidence(
     evidence["facts"] = facts
     evidence["graph_node_ids"].append(team["id"])
     evidence["graph_node_ids"].extend(m["id"] for m in members)
+
+
+def _list_evidence(
+    store: GraphStore,
+    evidence: dict[str, Any],
+    target: str,
+    question: str,
+) -> None:
+    """Enumerate every node of a label for "list all X" questions."""
+
+    if not target:
+        _general_evidence(store, evidence, evidence["terms"], None, None)
+        return
+    nodes = sorted(store.list_nodes(target), key=lambda n: queries.display_name(n))
+    if not nodes:
+        _general_evidence(store, evidence, evidence["terms"], None, None)
+        return
+
+    plural = {
+        "Person": "people",
+        "Project": "projects",
+        "Team": "teams",
+        "System": "systems",
+        "Decision": "decisions",
+        "Technology": "technologies",
+        "Document": "documents",
+        "Ticket": "tickets",
+        "Room": "rooms",
+        "Object": "objects",
+    }.get(target, f"{target.lower()}s")
+
+    facts = [f"NovaTech has {len(nodes)} {plural}:"]
+    facts.extend(_list_line(store, target, node) for node in nodes)
+    evidence["facts"] = facts
+    evidence["listing"] = {
+        "label": target,
+        "count": len(nodes),
+        "items": [queries.summarise(n) for n in nodes],
+    }
+    evidence["graph_node_ids"].extend(n["id"] for n in nodes)
+
+
+def _list_line(store: GraphStore, label: str, node: dict[str, Any]) -> str:
+    name = queries.display_name(node)
+    props = node.get("props", {})
+
+    def pretty(value: Any) -> str:
+        return str(value).replace("_", " ")
+
+    extra: list[str] = []
+    if label == "Project":
+        if props.get("key"):
+            extra.append(str(props["key"]))
+        if props.get("status"):
+            extra.append(pretty(props["status"]))
+        if props.get("health"):
+            extra.append(f"health {pretty(props['health'])}")
+        owner = props.get("owner_id")
+        if owner:
+            owner_node = store.get_node(owner)
+            if owner_node:
+                extra.append(f"owner {queries.display_name(owner_node)}")
+    elif label == "System":
+        if props.get("status"):
+            extra.append(pretty(props["status"]))
+    elif label == "Decision":
+        if props.get("status"):
+            extra.append(pretty(props["status"]))
+        if props.get("date"):
+            extra.append(str(props["date"])[:10])
+    elif label == "Ticket":
+        if props.get("status"):
+            extra.append(pretty(props["status"]))
+    elif label in ("Document", "Technology", "Person", "Team", "Room", "Object"):
+        if props.get("description"):
+            extra.append(str(props["description"])[:110])
+
+    return f"• {name} — " + ", ".join(extra) if extra else f"• {name}"
 
 
 def _place_evidence(

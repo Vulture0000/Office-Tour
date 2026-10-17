@@ -56,6 +56,7 @@ class BrainState(TypedDict, total=False):
     recommended_people: list[dict[str, Any]]
     decision_trace: dict[str, Any] | None
     action: dict[str, Any] | None
+    list_target: str
     log: list[str]
 
 
@@ -71,6 +72,7 @@ INTENT_SYSTEM = "SYSTEM_QUERY"
 INTENT_ACTION = "ACTION_REQUEST"
 INTENT_PLACE = "PLACE_QUERY"
 INTENT_TEAM = "TEAM_QUERY"
+INTENT_LIST = "LIST_QUERY"
 INTENT_GENERAL = "GENERAL_COMPANY_QUERY"
 
 ALL_INTENTS = [
@@ -85,6 +87,7 @@ ALL_INTENTS = [
     INTENT_ACTION,
     INTENT_PLACE,
     INTENT_TEAM,
+    INTENT_LIST,
     INTENT_GENERAL,
 ]
 
@@ -112,5 +115,6 @@ def new_state(question: str, context: QueryContext | None = None) -> BrainState:
         "question": question,
         "context": context or {},
         "entities": [],
+        "list_target": "",
         "log": [],
     }

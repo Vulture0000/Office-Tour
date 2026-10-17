@@ -30,6 +30,7 @@ from ..workflows.state import (
     INTENT_SYSTEM,
     INTENT_TEAM,
     INTENT_TICKETS,
+    INTENT_LIST,
     BrainState,
 )
 
@@ -105,6 +106,34 @@ SYSTEM_RE = re.compile(
     r"production|uptime|outage|downtime|deploy\w*|architecture)\b",
     re.IGNORECASE,
 )
+
+#: "listing" questions ("what are all the projects", "list teams", ...).
+LIST_QUERY_RE = re.compile(
+    r"\b(all|list|every|each|which|what|name|names|show|overview|many|count)\b",
+    re.IGNORECASE,
+)
+LIST_TARGETS: dict[str, str] = {
+    "project": "Project", "projects": "Project",
+    "team": "Team", "teams": "Team",
+    "system": "System", "systems": "System", "services": "System",
+    "decision": "Decision", "decisions": "Decision", "adrs": "Decision",
+    "technology": "Technology", "technologies": "Technology", "tech": "Technology",
+    "document": "Document", "documents": "Document", "docs": "Document",
+    "ticket": "Ticket", "tickets": "Ticket",
+    "person": "Person", "people": "Person", "employee": "Person", "employees": "Person",
+    "room": "Room", "rooms": "Room",
+}
+
+
+def detect_list_target(question: str) -> str | None:
+    """Return the node label a "list everything" question is asking about."""
+
+    if not LIST_QUERY_RE.search(question):
+        return None
+    for token in re.findall(r"[a-z]+", question.lower()):
+        if token in LIST_TARGETS:
+            return LIST_TARGETS[token]
+    return None
 
 
 def build_catalogue(store: GraphStore) -> list[dict[str, Any]]:
@@ -207,7 +236,8 @@ def resolve_context(
 
 #: Questions that are about the place the player is standing in.
 PLACE_CONTEXT_RE = re.compile(
-    r"\b(here|herein|room|location|where|around|nearby|near|current|stand|place|in\s+this)\b",
+    r"\b(here|herein|room|location|where|around|nearby|near|stand)\b"
+    r"|\bin\s+this\s+(room|place|area)\b|\bthis\s+(room|place|area)\b",
     re.IGNORECASE,
 )
 
@@ -334,6 +364,17 @@ def run(
     entities = resolve_context(store, question, context, entities)
     entities = _resolve_room_context(store, question, context, entities)
     intent, confidence = classify_intent(question, entities, context)
+
+    # "List everything" questions ("what are all the projects") become a LIST.
+    list_target = detect_list_target(question)
+    if (
+        list_target
+        and intent not in (INTENT_ACTION, INTENT_EXPERTISE, INTENT_DECISION_WHY)
+        and not any(e["label"] == list_target for e in entities)
+    ):
+        intent = INTENT_LIST
+        confidence = max(confidence, 0.75)
+        state["list_target"] = list_target
 
     # A "why" question about a technology is a decision trace.
     if intent == INTENT_DECISION and WHY_RE.search(question):
