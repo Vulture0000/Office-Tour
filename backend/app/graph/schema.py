@@ -24,6 +24,8 @@ LABELS: frozenset[str] = frozenset(
         "Skill",
         "Department",
         "Company",
+        "Room",
+        "Object",
     }
 )
 
@@ -53,6 +55,9 @@ RELATIONSHIPS: frozenset[str] = frozenset(
         "REPORTED_BY",
         "RESPONSIBLE_FOR",
         "ATTENDED",
+        "IN_ROOM",
+        "FOUND_IN",
+        "CONNECTS_TO",
     }
 )
 
@@ -86,6 +91,8 @@ NAME_PROPERTY: dict[str, str] = {
     "Skill": "name",
     "Department": "name",
     "Company": "name",
+    "Room": "name",
+    "Object": "name",
 }
 
 DISPLAY_NAME = "name"
