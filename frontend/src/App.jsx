@@ -26,6 +26,7 @@ const PANELS = [
   { id: 'systems', label: 'Systems', icon: Gamepad2 },
   { id: 'actions', label: 'Actions', icon: ClipboardCheck },
   { id: 'search', label: 'Search', icon: Search },
+  { id: 'office', label: 'Office', icon: Gamepad2 },
 ]
 
 function PanelView({ active, context, onContextUpdate, onFocusEntity }) {
@@ -50,6 +51,8 @@ function PanelView({ active, context, onContextUpdate, onFocusEntity }) {
       return <ActionsPanel />
     case 'search':
       return <SearchPanel onFocusEntity={onFocusEntity} />
+    case 'office':
+      return <OfficeExplorer onFocusEntity={onFocusEntity} />
     default:
       return <ChatPanel context={context} onFocusEntity={onFocusEntity} />
   }
