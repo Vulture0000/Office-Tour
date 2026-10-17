@@ -44,7 +44,9 @@ export default function GameCanvas({ context, onContextChange, focusTrigger }) {
       const scene = game.scene.getScene('OfficeScene')
       sceneRef.current = scene
       if (scene) {
-        scene.start('OfficeScene', { officeData, roomData: officeData.rooms[0] })
+        if (officeData && officeData.rooms && officeData.rooms[0]) {
+          scene.start('OfficeScene', { officeData, roomData: officeData.rooms[0] })
+        }
         scene.events.on('room:enter', (data) => {
           if (data?.room && onContextChange) {
             onContextChange({ room: data.room })
