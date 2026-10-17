@@ -72,8 +72,8 @@ async def lifespan(app: FastAPI):
             seed_graph(store, settings)
             try:
                 seed_office()
-            except Exception:
-                logger.warning("Office seed skipped or failed")
+            except Exception as e:
+                logger.warning("Office seed skipped or failed: %s", e)
     except GraphUnavailable as exc:
         logger.warning("Graph unavailable at startup: %s", exc)
 
