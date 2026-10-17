@@ -62,6 +62,18 @@ export default class OfficeScene extends Phaser.Scene {
     this.currentRoom = null
     this.nearby = null
     this.speed = 240
+
+    const isTyping = () => {
+      const a = document.activeElement
+      return !!a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.isContentEditable)
+    }
+    this.isTyping = isTyping
+
+    this.input.keyboard.on('keydown', (e) => {
+      if (isTyping()) {
+        e.stopPropagation()
+      }
+    })
   }
 
   drawMinimap() {
@@ -89,7 +101,7 @@ export default class OfficeScene extends Phaser.Scene {
   }
 
   update() {
-    if (!this.player) return
+    if (!this.player || this.isTyping()) return
 
     const k = this.keys
     let vx = 0, vy = 0
