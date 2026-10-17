@@ -29,6 +29,7 @@ export default class OfficeScene extends Phaser.Scene {
     this.speed = 180
     this.roomData = null
     this.officeData = null
+    this.infoText = null
   }
 
   init(data) {
@@ -45,9 +46,9 @@ export default class OfficeScene extends Phaser.Scene {
 
     this.buildOffice()
 
-    this.player = this.add.rectangle(200, 200, 16, 16, 0x38bdf8)
+    this.player = this.add.rectangle(this.roomData?.spawn?.x || 200, this.roomData?.spawn?.y || 200, 16, 16, 0x38bdf8)
     this.physics.add.existing(this.player)
-    this.player.body.setCollideWorldBounds(true)
+    this.player.body.setCollideWorldBounds(false)
 
     this.physics.add.collider(this.player, this.walls)
     this.physics.add.overlap(this.player, this.doors, this.handleDoorOverlap, null, this)
@@ -63,27 +64,29 @@ export default class OfficeScene extends Phaser.Scene {
       padding: { x: 8, y: 4 }
     }).setScrollFactor(0).setDepth(100).setVisible(false)
 
+    this.infoText = this.add.text(10, 40, `Room: ${this.roomData?.id || 'lobby'}`, {
+      fontSize: '12px',
+      fill: '#94a3b8',
+      backgroundColor: 'rgba(15, 23, 42, 0.6)',
+      padding: { x: 8, y: 4 }
+    }).setScrollFactor(0).setDepth(100)
+
     this.events.emit('room:enter', { room: this.roomData?.id || 'lobby' })
   }
 
   buildOffice() {
     if (!this.roomData) return
 
-    const { layout = [], doors = [], interactables = [], spawn = { x: 200, y: 200 } } = this.roomData
-    if (this.player) {
-      this.player.x = spawn.x
-      this.player.y = spawn.y
-    }
+    const { layout = [], doors = [], interactables = [] } = this.roomData
 
     layout.forEach((rect) => {
-      const color = ROOM_COLORS[rect.type] || 0x334155
-      const wall = this.add.rectangle(rect.x + rect.w / 2, rect.y + rect.h / 2, rect.w, rect.h, color, 0.3)
+      const wall = this.add.rectangle(rect.x + rect.w / 2, rect.y + rect.h / 2, rect.w, rect.h, 0x334155, 0.4)
       this.physics.add.existing(wall, true)
       this.walls.add(wall)
     })
 
     doors.forEach((door) => {
-      const d = this.add.rectangle(door.x + door.w / 2, door.y + door.h / 2, door.w, door.h, 0x10b981, 0.6)
+      const d = this.add.rectangle(door.x + door.w / 2, door.y + door.h / 2, door.w, door.h, 0x10b981, 0.7)
       d.setData('target', door.target)
       d.setData('targetRoom', door.targetRoom || door.target)
       this.physics.add.existing(d, true)
@@ -105,7 +108,10 @@ export default class OfficeScene extends Phaser.Scene {
   handleDoorOverlap(player, door) {
     const target = door.getData('targetRoom') || door.getData('target')
     if (target && this.officeData) {
-      this.scene.start('OfficeScene', { officeData: this.officeData, roomData: this.officeData.rooms.find((r) => r.id === target) })
+      const nextRoom = this.officeData.rooms.find((r) => r.id === target)
+      if (nextRoom) {
+        this.scene.start('OfficeScene', { officeData: this.officeData, roomData: nextRoom })
+      }
     }
   }
 
@@ -134,7 +140,7 @@ export default class OfficeScene extends Phaser.Scene {
 
     if (this.interactText) {
       const distance = this.nearby ? Phaser.Math.Distance.Between(this.player.x, this.player.y, this.nearby.x, this.nearby.y) : Infinity
-      if (!this.nearby || distance > 40) {
+      if (!this.nearby || distance > 50) {
         this.nearby = null
         this.interactText.setVisible(false)
       }
