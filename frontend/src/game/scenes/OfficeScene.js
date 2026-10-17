@@ -1,21 +1,5 @@
 import Phaser from 'phaser'
 
-const TILE_SIZE = 32
-const ROOM_COLORS = {
-  lobby: 0x1f2937,
-  reception: 0x1f2937,
-  hallway: 0x111827,
-  office: 0x0f172a,
-  meeting: 0x0f172a,
-  breakroom: 0x0f172a,
-  kitchen: 0x0f172a,
-  it: 0x0f172a,
-  hr: 0x0f172a,
-  finance: 0x0f172a,
-  storage: 0x0f172a,
-  exit: 0x064e3b
-}
-
 export default class OfficeScene extends Phaser.Scene {
   constructor() {
     super('OfficeScene')
@@ -26,7 +10,7 @@ export default class OfficeScene extends Phaser.Scene {
     this.interactables = null
     this.interactText = null
     this.nearby = null
-    this.speed = 180
+    this.speed = 200
     this.roomData = null
     this.officeData = null
     this.infoText = null
@@ -38,7 +22,7 @@ export default class OfficeScene extends Phaser.Scene {
   }
 
   create() {
-    this.cameras.main.setBackgroundColor('#020617')
+    this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x020617)
 
     this.walls = this.physics.add.staticGroup()
     this.doors = this.physics.add.staticGroup()
@@ -46,16 +30,19 @@ export default class OfficeScene extends Phaser.Scene {
 
     this.buildOffice()
 
-    this.player = this.add.rectangle(this.roomData?.spawn?.x || 200, this.roomData?.spawn?.y || 200, 16, 16, 0x38bdf8)
+    const spawn = this.roomData?.spawn || { x: 200, y: 200 }
+    this.player = this.add.circle(spawn.x, spawn.y, 8, 0x38bdf8)
     this.physics.add.existing(this.player)
-    this.player.body.setCollideWorldBounds(false)
+    if (this.player.body) {
+      this.player.body.setCollideWorldBounds(false)
+    }
 
     this.physics.add.collider(this.player, this.walls)
     this.physics.add.overlap(this.player, this.doors, this.handleDoorOverlap, null, this)
     this.physics.add.overlap(this.player, this.interactables, this.handleInteractOverlap, null, this)
 
     this.cursors = this.input.keyboard.createCursorKeys()
-    this.cameras.main.startFollow(this.player, true, 0.08, 0.08)
+    this.cameras.main.startFollow(this.player, true, 0.1, 0.1)
 
     this.interactText = this.add.text(10, 10, '', {
       fontSize: '12px',
@@ -76,17 +63,16 @@ export default class OfficeScene extends Phaser.Scene {
 
   buildOffice() {
     if (!this.roomData) return
-
     const { layout = [], doors = [], interactables = [] } = this.roomData
 
     layout.forEach((rect) => {
-      const wall = this.add.rectangle(rect.x + rect.w / 2, rect.y + rect.h / 2, rect.w, rect.h, 0x334155, 0.4)
+      const wall = this.add.rectangle(rect.x + rect.w / 2, rect.y + rect.h / 2, rect.w, rect.h, 0x334155, 0.5)
       this.physics.add.existing(wall, true)
       this.walls.add(wall)
     })
 
     doors.forEach((door) => {
-      const d = this.add.rectangle(door.x + door.w / 2, door.y + door.h / 2, door.w, door.h, 0x10b981, 0.7)
+      const d = this.add.rectangle(door.x + door.w / 2, door.y + door.h / 2, door.w, door.h, 0x10b981, 0.8)
       d.setData('target', door.target)
       d.setData('targetRoom', door.targetRoom || door.target)
       this.physics.add.existing(d, true)
@@ -95,11 +81,10 @@ export default class OfficeScene extends Phaser.Scene {
 
     interactables.forEach((obj) => {
       const color = obj.type === 'npc' ? 0xf59e0b : obj.type === 'item' ? 0x22d3ee : obj.type === 'document' ? 0xa78bfa : 0x64748b
-      const sprite = this.add.rectangle(obj.x + obj.w / 2, obj.y + obj.h / 2, obj.w, obj.h, color, 0.9)
+      const sprite = this.add.rectangle(obj.x + obj.w / 2, obj.y + obj.h / 2, obj.w, obj.h, color, 1)
       sprite.setData('id', obj.id)
       sprite.setData('name', obj.name)
       sprite.setData('type', obj.type)
-      sprite.setData('desc', obj.desc || '')
       this.physics.add.existing(sprite, true)
       this.interactables.add(sprite)
     })
@@ -124,7 +109,7 @@ export default class OfficeScene extends Phaser.Scene {
   }
 
   update() {
-    if (!this.player) return
+    if (!this.player || !this.player.body) return
     this.player.body.setVelocity(0)
 
     if (this.cursors.left.isDown || this.input.keyboard.addKey('A').isDown) {
@@ -140,7 +125,7 @@ export default class OfficeScene extends Phaser.Scene {
 
     if (this.interactText) {
       const distance = this.nearby ? Phaser.Math.Distance.Between(this.player.x, this.player.y, this.nearby.x, this.nearby.y) : Infinity
-      if (!this.nearby || distance > 50) {
+      if (!this.nearby || distance > 60) {
         this.nearby = null
         this.interactText.setVisible(false)
       }
