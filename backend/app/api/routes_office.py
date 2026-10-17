@@ -2,7 +2,7 @@ from fastapi import APIRouter
 
 from ..graph.client import get_store
 
-router = APIRouter()
+router = APIRouter(prefix="/api", tags=["office"])
 
 
 @router.get('/office/rooms')
