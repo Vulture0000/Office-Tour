@@ -13,10 +13,10 @@ from typing import Any
 from ..graph import queries
 from ..graph.client import GraphStore
 from ..rag.retriever import VectorStore
-from ..workflows.state import INTENT_ACTION, BrainState
+from ..workflows.state import INTENT_ACTION, INTENT_PLACE, BrainState
 
 #: Intents that rarely benefit from document passages.
-LOW_DOCUMENT_INTENTS = {INTENT_ACTION}
+LOW_DOCUMENT_INTENTS = {INTENT_ACTION, INTENT_PLACE}
 
 EXCERPT_LENGTH = 320
 

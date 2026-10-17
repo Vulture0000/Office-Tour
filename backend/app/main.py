@@ -71,7 +71,12 @@ async def lifespan(app: FastAPI):
             logger.info("Graph is empty; seeding the NovaTech demo dataset…")
             seed_graph(store, settings)
             try:
-                seed_office()
+                office_stats = seed_office(store)
+                logger.info(
+                    "Office seeded: %s rooms, %s objects",
+                    office_stats.get("rooms", 0),
+                    office_stats.get("objects", 0),
+                )
             except Exception as e:
                 logger.warning("Office seed skipped or failed: %s", e)
     except GraphUnavailable as exc:

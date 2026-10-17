@@ -1,63 +1,82 @@
-from .client import get_store
+"""Seed the explorable office into the knowledge graph.
+
+The office layout lives in ``data/office_layout.json`` — the single source of
+truth shared with the frontend, so the walkable map and the graph always agree.
+
+Every room becomes a ``Room`` node and every object (NPCs, items, furniture)
+becomes an ``Object`` node carrying its description, so graph-aware RAG can
+answer "what is this?" / "what is in this room?" about anything on the map.
+"""
+
+from __future__ import annotations
+
+import json
+from typing import Any
+
+from ..config import get_settings
+from .client import GraphStore, get_store
+
+#: Edge types linking office entities.
+OBJ_ROOM_EDGE = "FOUND_IN"   # object lives in a room
+NPC_ROOM_EDGE = "IN_ROOM"    # a person stands in a room
+ROOM_EDGE = "CONNECTS_TO"    # room-to-room adjacency
 
 
-def seed_office() -> None:
-  store = get_store()
+def _layout_path() -> Any:
+    return get_settings().data_dir / "office_layout.json"
 
-  # Add rooms
-  rooms = [
-    ('lobby', 'Room', {'id': 'lobby', 'name': 'Lobby', 'type': 'lobby'}),
-    ('reception', 'Room', {'id': 'reception', 'name': 'Reception', 'type': 'reception'}),
-    ('hallway1', 'Room', {'id': 'hallway1', 'name': 'Main Hallway', 'type': 'hallway'}),
-    ('meeting_room', 'Room', {'id': 'meeting_room', 'name': 'Meeting Room', 'type': 'meeting'}),
-    ('it_room', 'Room', {'id': 'it_room', 'name': 'IT Room', 'type': 'it'}),
-    ('office_area', 'Room', {'id': 'office_area', 'name': 'Office Area', 'type': 'office'}),
-    ('kitchen', 'Room', {'id': 'kitchen', 'name': 'Kitchen', 'type': 'kitchen'}),
-  ]
-  for rid, label, props in rooms:
-    store.create_node(label, props)
 
-  # Add people
-  people = [
-    ('receptionist', 'Person', {'id': 'receptionist', 'name': 'Receptionist', 'role': 'Receptionist'}),
-    ('bob', 'Person', {'id': 'bob', 'name': 'Bob', 'role': 'Tech Lead'}),
-    ('alice', 'Person', {'id': 'alice', 'name': 'Alice', 'role': 'DevOps'}),
-    ('carol', 'Person', {'id': 'carol', 'name': 'Carol', 'role': 'Engineer'}),
-    ('dave', 'Person', {'id': 'dave', 'name': 'Dave', 'role': 'PM'}),
-  ]
-  for pid, label, props in people:
-    store.create_node(label, props)
+def load_layout() -> dict[str, Any]:
+    path = _layout_path()
+    if not path.exists():
+        return {}
+    with path.open(encoding="utf-8") as handle:
+        return json.load(handle)
 
-  # Add items
-  items = [
-    ('badge', 'Object', {'id': 'badge', 'name': 'Visitor Badge', 'type': 'badge'}),
-    ('directory', 'Document', {'id': 'directory', 'name': 'Office Directory', 'type': 'directory', 'title': 'Office Directory'}),
-    ('server_doc', 'Document', {'id': 'server_doc', 'name': 'Server Notes', 'type': 'doc', 'title': 'Server Notes'}),
-    ('atlas_doc', 'Document', {'id': 'atlas_doc', 'name': 'Atlas Design Doc', 'type': 'doc', 'title': 'Atlas Design Doc'}),
-    ('fridge_note', 'Object', {'id': 'fridge_note', 'name': 'Sticky Note', 'type': 'note'}),
-  ]
-  for iid, label, props in items:
-    store.create_node(label, props)
 
-  # Connect people to rooms
-  store.create_edge('receptionist', 'reception', 'IN_ROOM')
-  store.create_edge('bob', 'meeting_room', 'IN_ROOM')
-  store.create_edge('alice', 'it_room', 'IN_ROOM')
-  store.create_edge('carol', 'office_area', 'IN_ROOM')
-  store.create_edge('dave', 'office_area', 'IN_ROOM')
+def seed_office(store: GraphStore | None = None) -> dict[str, int]:
+    """Create Room/Object nodes and their edges. Idempotent (MERGE-style)."""
 
-  # Connect items to rooms/people
-  store.create_edge('badge', 'lobby', 'FOUND_IN')
-  store.create_edge('directory', 'hallway1', 'FOUND_IN')
-  store.create_edge('server_doc', 'it_room', 'FOUND_IN')
-  store.create_edge('atlas_doc', 'office_area', 'FOUND_IN')
-  store.create_edge('fridge_note', 'kitchen', 'FOUND_IN')
+    store = store or get_store()
+    layout = load_layout()
+    if not layout:
+        return {"rooms": 0, "objects": 0, "edges": 0}
 
-  # Room connections
-  store.create_edge('lobby', 'reception', 'CONNECTS_TO')
-  store.create_edge('lobby', 'hallway1', 'CONNECTS_TO')
-  store.create_edge('reception', 'hallway1', 'CONNECTS_TO')
-  store.create_edge('hallway1', 'meeting_room', 'CONNECTS_TO')
-  store.create_edge('hallway1', 'it_room', 'CONNECTS_TO')
-  store.create_edge('hallway1', 'office_area', 'CONNECTS_TO')
-  store.create_edge('office_area', 'kitchen', 'CONNECTS_TO')
+    rooms = layout.get("rooms", [])
+    objects = 0
+    edges = 0
+
+    for room in rooms:
+        store.create_node(
+            "Room",
+            {
+                "id": room["id"],
+                "name": room["name"],
+                "type": room.get("type") or room.get("id"),
+                "description": room.get("desc", ""),
+            },
+        )
+        edges += 1
+        for obj in room.get("objects", []):
+            store.create_node(
+                "Object",
+                {
+                    "id": obj["id"],
+                    "name": obj["name"],
+                    "type": obj.get("type", "object"),
+                    "description": obj.get("info", ""),
+                    "room_id": room["id"],
+                    "room_name": room["name"],
+                },
+            )
+            objects += 1
+            rel = NPC_ROOM_EDGE if obj.get("type") == "npc" else OBJ_ROOM_EDGE
+            store.create_edge(obj["id"], room["id"], rel)
+            edges += 1
+
+    for src, dst in layout.get("connections", []):
+        store.create_edge(src, dst, ROOM_EDGE)
+        store.create_edge(dst, src, ROOM_EDGE)
+        edges += 2
+
+    return {"rooms": len(rooms), "objects": objects, "edges": edges}

@@ -25,6 +25,7 @@ from ..workflows.state import (
     INTENT_EXPERTISE,
     INTENT_GENERAL,
     INTENT_PERSON,
+    INTENT_PLACE,
     INTENT_PROJECT,
     INTENT_SYSTEM,
     INTENT_TICKETS,
@@ -32,6 +33,12 @@ from ..workflows.state import (
 )
 
 PRONOUNS = {"he", "she", "him", "her", "his", "they", "them", "it", "this", "that", "its"}
+
+#: Id fragments too generic to be meaningful aliases (``it_room`` -> "room").
+GENERIC_ID_PARTS = {"room", "hall", "area", "floor", "level", "section", "wing", "desk"}
+
+#: Office labels matched only by exact id/name (no id-fragment aliases).
+OFFICE_LABELS = {"Room", "Object"}
 
 STOPWORDS = {
     "the", "a", "an", "and", "or", "of", "to", "in", "on", "for", "with", "is", "are",
@@ -111,8 +118,15 @@ def build_catalogue(store: GraphStore) -> list[dict[str, Any]]:
             for extra in (props.get("key"), props.get("title")):
                 if extra:
                     aliases.add(str(extra).lower())
-            # Split compound ids like team_ai_platform into words.
-            aliases.update(part for part in str(node["id"]).lower().split("_") if len(part) > 3)
+            # Split compound ids like team_ai_platform into words, but never for
+            # office Room/Object nodes: their full ids/names are descriptive and
+            # fragments would collide with real business entities (atlas_doc -> "atlas").
+            if label not in OFFICE_LABELS:
+                aliases.update(
+                    part
+                    for part in str(node["id"]).lower().split("_")
+                    if len(part) > 3 and part not in GENERIC_ID_PARTS
+                )
             catalogue.append(
                 {
                     "id": node["id"],
@@ -148,11 +162,14 @@ def extract_entities(
                         "_strength": strength,
                     }
                 break
-    results = []
-    for entry in found.values():
+    results = list(found.values())
+    # Strongest alias match first (an explicit name beats a loose fragment),
+    # then longer names, then label for stability.
+    results.sort(
+        key=lambda item: (-item.get("_strength", 0), -len(item["name"]), item["label"])
+    )
+    for entry in results:
         entry.pop("_strength", None)
-        results.append(entry)
-    results.sort(key=lambda item: (-len(item["name"]), item["label"]))
     return results
 
 
@@ -175,6 +192,40 @@ def resolve_context(
         return entities
     node = store.get_node(str(context["entity_id"]))
     if not node:
+        return entities
+    return [
+        {
+            "id": node["id"],
+            "label": node["label"],
+            "name": queries.display_name(node),
+            "subtitle": "",
+            "resolved_from_context": True,
+        }
+    ]
+
+
+#: Questions that are about the place the player is standing in.
+PLACE_CONTEXT_RE = re.compile(
+    r"\b(here|herein|room|location|where|around|nearby|near|current|stand|place|in\s+this)\b",
+    re.IGNORECASE,
+)
+
+
+def _resolve_room_context(
+    store: GraphStore,
+    question: str,
+    context: dict[str, Any],
+    entities: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Anchor "what is in this room?" to the room the player currently occupies."""
+
+    if entities:
+        return entities
+    room_key = context.get("room_id") or context.get("room")
+    if not room_key or not PLACE_CONTEXT_RE.search(question):
+        return entities
+    node = store.get_node(str(room_key))
+    if not node or node.get("label") != "Room":
         return entities
     return [
         {
@@ -217,6 +268,9 @@ def classify_intent(
         return INTENT_ACTION, 0.9
     if EXPERTISE_RE.search(question):
         return INTENT_EXPERTISE, 0.88
+    # A concrete office place/object is the focus of the question when named.
+    if "Room" in labels or "Object" in labels:
+        return INTENT_PLACE, 0.82
     if WHY_RE.search(question) and DECISION_CHOICE_RE.search(question):
         return INTENT_DECISION, 0.9  # refined to trace when a technology is present
     if DECISION_RE.search(question) or "Decision" in labels:
@@ -241,6 +295,8 @@ def classify_intent(
         return INTENT_PERSON, 0.6
     if "Technology" in labels:
         return INTENT_EXPERTISE, 0.6
+    if context.get("entity_type") in {"npc", "item", "furniture", "Room", "Object"}:
+        return INTENT_PLACE, 0.6
     if context.get("entity_type") == "Person":
         return INTENT_PERSON, 0.55
     if context.get("entity_type") == "Project":
@@ -272,6 +328,7 @@ def run(
     catalogue = build_catalogue(store)
     entities = extract_entities(store, question, catalogue)
     entities = resolve_context(store, question, context, entities)
+    entities = _resolve_room_context(store, question, context, entities)
     intent, confidence = classify_intent(question, entities, context)
 
     # A "why" question about a technology is a decision trace.

@@ -27,6 +27,7 @@ from ..workflows.state import (
     INTENT_EXPERTISE,
     INTENT_GENERAL,
     INTENT_PERSON,
+    INTENT_PLACE,
     INTENT_PROJECT,
     INTENT_SYSTEM,
     INTENT_TICKETS,
@@ -165,6 +166,21 @@ def _build_sources(state: BrainState, store: GraphStore) -> list[dict[str, Any]]
             }
         )
 
+    if evidence.get("place"):
+        place = evidence["place"]
+        sources.append(
+            {
+                "id": place.get("id"),
+                "type": "graph",
+                "title": f"Office map · {place.get('type', 'place').title()}: {place.get('name')}",
+                "doc_type": place.get("type", "Place"),
+                "author": "",
+                "date": "",
+                "excerpt": place.get("description", ""),
+                "heading": "",
+                "relevance": 0.95,
+            }
+        )
     # Deduplicate by (type, id), keeping the highest relevance.
     best: dict[tuple[str, str], dict[str, Any]] = {}
     for source in sources:
@@ -202,7 +218,7 @@ def _confidence(state: BrainState, sources: list[dict[str, Any]]) -> float:
     evidence = state.get("evidence", {}) or {}
     if not any(
         evidence.get(key)
-        for key in ("person", "project", "decision", "documents", "tickets", "people_ranked")
+        for key in ("person", "project", "decision", "documents", "tickets", "people_ranked", "place")
     ):
         score = min(score, 0.3)
     return round(min(0.98, score), 2)
@@ -515,6 +531,18 @@ def _system_answer(state: BrainState) -> str:
     return "I could not find that system in the company graph."
 
 
+def _place_answer(state: BrainState) -> str:
+    evidence = state.get("evidence", {}) or {}
+    facts = evidence.get("facts", [])
+    # Drop the generic "graph holds N nodes" filler if we have real place facts.
+    real = [f for f in facts if "knowledge graph holds" not in f]
+    if real:
+        return "\n".join(real)
+    if facts:
+        return "\n".join(facts)
+    return "I could not find that place or object on the office map."
+
+
 def _general_answer(state: BrainState) -> str:
     evidence = state["evidence"]
     facts = evidence.get("facts", [])
@@ -566,6 +594,7 @@ def run(state: BrainState, store: GraphStore, llm: LLMProvider | None = None) ->
         INTENT_DOCUMENT: _document_answer,
         INTENT_TICKETS: _ticket_answer,
         INTENT_SYSTEM: _system_answer,
+        INTENT_PLACE: _place_answer,
         INTENT_GENERAL: _general_answer,
     }
     composer = composers.get(intent, _general_answer)

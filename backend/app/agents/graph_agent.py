@@ -21,6 +21,7 @@ from ..workflows.state import (
     INTENT_EXPERTISE,
     INTENT_GENERAL,
     INTENT_PERSON,
+    INTENT_PLACE,
     INTENT_PROJECT,
     INTENT_SYSTEM,
     INTENT_TICKETS,
@@ -73,6 +74,7 @@ def run(state: BrainState, store: GraphStore) -> BrainState:
         "technology": None,
         "system": None,
         "document": None,
+        "place": None,
         "decisions": [],
         "documents": [],
         "tickets": [],
@@ -91,9 +93,13 @@ def run(state: BrainState, store: GraphStore) -> BrainState:
     decision = _first(entities, "Decision")
     document = _first(entities, "Document")
     system = _first(entities, "System")
+    room = _first(entities, "Room")
+    office_object = _first(entities, "Object")
 
     if intent == INTENT_PERSON:
         _person_evidence(store, evidence, person, question)
+    elif intent == INTENT_PLACE:
+        _place_evidence(store, evidence, room, office_object, entities, question)
     elif intent == INTENT_PROJECT:
         _project_evidence(store, evidence, project, question)
     elif intent == INTENT_DECISION_WHY:
@@ -552,6 +558,109 @@ def _action_evidence(
     # If the user is standing next to a person but did not name them, use them.
     if not person and not project:
         evidence["facts"] = ["No explicit target found for the requested action."]
+
+
+def _place_evidence(
+    store: GraphStore,
+    evidence: dict[str, Any],
+    room: dict[str, Any] | None,
+    office_object: dict[str, Any] | None,
+    entities: list[dict[str, Any]],
+    question: str,
+) -> None:
+    """Describe an office room or object and its immediate surroundings."""
+
+    facts: list[str] = []
+
+    if office_object:
+        node = store.get_node(office_object["id"])
+        if node:
+            props = node["props"]
+            name = queries.display_name(node)
+            kind = str(props.get("type", "object")).replace("_", " ")
+            desc = str(props.get("description", "")).strip()
+            facts.append(f"{name} ({kind}) — {desc}" if desc else f"{name} ({kind}).")
+            evidence["place"] = {
+                "id": node["id"],
+                "name": name,
+                "type": kind,
+                "description": desc,
+            }
+            room_id = props.get("room_id") or _find_related_room(store, office_object["id"])
+            if room_id:
+                room_node = store.get_node(str(room_id))
+                if room_node:
+                    facts.append(f"Located in the {queries.display_name(room_node)}.")
+                    evidence["focus"].append(queries.summarise(room_node))
+                    evidence["graph_node_ids"].append(room_node["id"])
+                    facts.append(
+                        "Also in this room: "
+                        + _list_objects(store, str(room_id), exclude=office_object["id"])
+                        + "."
+                    )
+            evidence["graph_node_ids"].append(office_object["id"])
+
+    if room:
+        node = store.get_node(room["id"])
+        if node:
+            props = node["props"]
+            desc = str(props.get("description", "")).strip()
+            name = queries.display_name(node)
+            facts.append(f"{name} — {desc}" if desc else f"{name}.")
+            if not evidence.get("place"):
+                evidence["place"] = {
+                    "id": node["id"],
+                    "name": name,
+                    "type": "room",
+                    "description": desc,
+                }
+            inside = _object_nodes(store, room["id"])
+            if inside:
+                facts.append(
+                    "You can find: " + ", ".join(queries.display_name(o) for o in inside) + "."
+                )
+            linked = _list_connected_rooms(store, room["id"])
+            if linked:
+                facts.append(f"Connects to: {linked}.")
+            evidence["graph_node_ids"].append(room["id"])
+
+    if not facts:
+        _general_evidence(store, evidence, evidence["terms"], None, None)
+        return
+    evidence["facts"] = facts
+
+
+def _find_related_room(store: GraphStore, object_id: str) -> str | None:
+    nodes, _ = store.expand(object_id, rels=["FOUND_IN", "IN_ROOM"], depth=1)
+    for node in nodes:
+        if node["label"] == "Room" and node["id"] != object_id:
+            return str(node["id"])
+    return None
+
+
+def _object_nodes(store: GraphStore, room_id: str) -> list[dict[str, Any]]:
+    nodes, _ = store.expand(room_id, rels=["FOUND_IN", "IN_ROOM"], depth=1)
+    return [
+        n
+        for n in nodes
+        if n["label"] == "Object" and n["id"] != room_id
+    ]
+
+
+def _list_objects(store: GraphStore, room_id: str, exclude: str | None = None) -> str:
+    names = [
+        queries.display_name(n)
+        for n in _object_nodes(store, room_id)
+        if n["id"] != exclude
+    ]
+    return ", ".join(names) if names else "nothing else"
+
+
+def _list_connected_rooms(store: GraphStore, room_id: str) -> str:
+    nodes, _ = store.expand(room_id, rels=["CONNECTS_TO"], depth=1)
+    return ", ".join(
+        queries.display_name(n) for n in nodes if n["label"] == "Room" and n["id"] != room_id
+    )
 
 
 def _general_evidence(
