@@ -1,0 +1,60 @@
+{
+  "company": {
+    "id": "novatech",
+    "name": "NovaTech",
+    "tagline": "AI-native product engineering",
+    "founded": 2021,
+    "headquarters": "Bengaluru, India",
+    "size": 140
+  },
+  "departments": [
+    {"id": "dept_engineering", "name": "Engineering", "description": "All product engineering: platform, web, infrastructure and data."},
+    {"id": "dept_product", "name": "Product", "description": "Product management, design and customer research."},
+    {"id": "dept_operations", "name": "Operations", "description": "Security, IT and internal operations."}
+  ],
+  "teams": [
+    {"id": "team_engineering", "name": "Engineering", "department_id": "dept_engineering", "description": "Overall engineering org, owns architecture standards."},
+    {"id": "team_ai_platform", "name": "AI Platform", "department_id": "dept_engineering", "description": "Builds Nova, the internal AI assistant platform."},
+    {"id": "team_frontend", "name": "Frontend", "department_id": "dept_engineering", "description": "Web experience for Mercury and internal tools."},
+    {"id": "team_backend", "name": "Backend", "department_id": "dept_engineering", "description": "Services and data platform behind Atlas and Orion."},
+    {"id": "team_devops", "name": "DevOps", "department_id": "dept_engineering", "description": "Kubernetes, CI/CD and cloud infrastructure."},
+    {"id": "team_product", "name": "Product", "department_id": "dept_product", "description": "Roadmaps, PRDs and customer discovery."},
+    {"id": "team_security", "name": "Security", "department_id": "dept_operations", "description": "AppSec, policy and incident response."},
+    {"id": "team_data", "name": "Data", "department_id": "dept_engineering", "description": "Pipelines, warehouse and analytics for Atlas."}
+  ],
+  "technologies": [
+    {"id": "python", "name": "Python", "category": "language", "description": "Primary backend language at NovaTech."},
+    {"id": "typescript", "name": "TypeScript", "category": "language", "description": "Primary frontend language."},
+    {"id": "fastapi", "name": "FastAPI", "category": "framework", "description": "Standard web framework for internal and public APIs."},
+    {"id": "react", "name": "React", "category": "framework", "description": "UI library for Mercury and internal tools."},
+    {"id": "postgresql", "name": "PostgreSQL", "category": "database", "description": "Primary relational datastore since the Atlas migration."},
+    {"id": "mongodb", "name": "MongoDB", "category": "database", "description": "Legacy document datastore, being retired by Atlas."},
+    {"id": "redis", "name": "Redis", "category": "cache", "description": "Caching, sessions and job queues."},
+    {"id": "falkordb", "name": "FalkorDB", "category": "database", "description": "Graph database used for relationship-aware retrieval in Nova."},
+    {"id": "docker", "name": "Docker", "category": "infra", "description": "Container runtime for all services."},
+    {"id": "kubernetes", "name": "Kubernetes", "category": "infra", "description": "Container orchestration on EKS."},
+    {"id": "aws", "name": "AWS", "category": "cloud", "description": "Cloud provider: EKS, RDS, S3, Lambda."},
+    {"id": "langgraph", "name": "LangGraph", "category": "ai", "description": "Agent orchestration framework used by Nova."},
+    {"id": "github_actions", "name": "GitHub Actions", "category": "ci", "description": "CI/CD pipeline runner."}
+  ],
+  "systems": [
+    {"id": "sys_api_server", "name": "API Server", "technology_id": "fastapi", "owner_id": "arun_kumar", "team_id": "team_backend", "description": "FastAPI service layer exposing all NovaTech product APIs.", "status": "healthy"},
+    {"id": "sys_primary_db", "name": "Primary Database", "technology_id": "postgresql", "owner_id": "arun_kumar", "team_id": "team_backend", "description": "PostgreSQL RDS cluster hosting Atlas and Orion data.", "status": "healthy"},
+    {"id": "sys_cache", "name": "Cache Layer", "technology_id": "redis", "owner_id": "vikram_raj", "team_id": "team_devops", "description": "Redis cluster used for sessions, rate limits and job queues.", "status": "healthy"},
+    {"id": "sys_ai_services", "name": "AI Services", "technology_id": "langgraph", "owner_id": "priya_sharma", "team_id": "team_ai_platform", "description": "LangGraph agent workers and LLM gateway for Nova.", "status": "degraded"},
+    {"id": "sys_graph_db", "name": "Graph Database", "technology_id": "falkordb", "owner_id": "priya_sharma", "team_id": "team_ai_platform", "description": "FalkorDB instance holding the company knowledge graph.", "status": "healthy"},
+    {"id": "sys_cloud_infra", "name": "Cloud Infrastructure", "technology_id": "kubernetes", "owner_id": "vikram_raj", "team_id": "team_devops", "description": "AWS EKS clusters, networking and observability stack.", "status": "healthy"},
+    {"id": "sys_web_app", "name": "Mercury Web App", "technology_id": "react", "owner_id": "rahul_menon", "team_id": "team_frontend", "description": "React + Vite customer dashboard served through CDN.", "status": "healthy"},
+    {"id": "sys_auth_gateway", "name": "Auth Gateway", "technology_id": "python", "owner_id": "ananya_iyer", "team_id": "team_security", "description": "Orion identity gateway enforcing OIDC and RBAC.", "status": "healthy"}
+  ],
+  "skills": [
+    {"id": "skill_database_design", "name": "Database Design", "description": "Schema modelling, migrations and query tuning."},
+    {"id": "skill_api_design", "name": "API Design", "description": "REST contract design, versioning and documentation."},
+    {"id": "skill_frontend_ux", "name": "Frontend Engineering", "description": "Component architecture, performance and accessibility."},
+    {"id": "skill_ml_engineering", "name": "ML Engineering", "description": "Evaluation, prompt design and agent orchestration."},
+    {"id": "skill_cloud_infra", "name": "Cloud Infrastructure", "description": "Kubernetes, IaC and cost-aware scaling."},
+    {"id": "skill_security_review", "name": "Security Review", "description": "Threat modelling, code review and policy authoring."},
+    {"id": "skill_product_strategy", "name": "Product Strategy", "description": "Roadmapping, discovery and prioritisation."},
+    {"id": "skill_data_pipelines", "name": "Data Pipelines", "description": "ELT, warehouse modelling and data quality."}
+  ]
+}

@@ -1,0 +1,12 @@
+node_modules
+dist
+.cache
+*.log
+__pycache__
+*.pyc
+.env
+.git
+.idea
+.pytest_cache
+.venv
+var

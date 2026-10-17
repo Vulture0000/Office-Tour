@@ -1,0 +1,10 @@
+node_modules
+dist
+*.log
+__pycache__
+*.pyc
+.venv
+var
+pyrightconfig.json
+pyrightconfig
+pytest_cache

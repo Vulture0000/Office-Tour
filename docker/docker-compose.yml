@@ -1,0 +1,58 @@
+services:
+  falkordb:
+    image: falkordb/falkordb:latest
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    environment:
+      - REDIS_ARGS=--save 60 1
+    volumes:
+      - falkordb-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: ../docker/backend.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      falkordb:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    environment:
+      - GRAPH_BACKEND=falkor
+      - FALKORDB_HOST=falkordb
+      - FALKORDB_PORT=6379
+      - FALKORDB_GRAPH=novatech
+      - DEMO_MODE=true
+      - EMBEDDING_PROVIDER=hashing
+      - LLM_PROVIDER=demo
+      - VECTOR_STORE_PATH=./var/vector_store.json
+      - ACTIONS_STORE_PATH=./var/actions.json
+      - CORS_ORIGINS=http://localhost:5173,http://localhost:3000,http://localhost:8080
+    volumes:
+      - ../data:/app/data:ro
+      - backend-var:/app/var
+    command: >
+      sh -c "uvicorn app.main:app --host 0.0.0.0 --port 8000"
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: ../docker/frontend.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8000/api
+
+volumes:
+  falkordb-data:
+  backend-var:

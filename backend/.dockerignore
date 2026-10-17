@@ -1,0 +1,15 @@
+__pycache__
+*.pyc
+*.pyo
+*.db
+*.sqlite3
+.venv
+var
+.env
+pytest_cache
+.cache
+.idea
+.pytest_cache
+mypy_cache
+.DS_Store
+src/__pycache__/

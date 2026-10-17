@@ -1,0 +1,62 @@
+[
+  {
+    "id": "atlas",
+    "key": "ATLAS",
+    "name": "Project Atlas",
+    "description": "Customer data platform. Migrated from MongoDB to PostgreSQL and now powers analytics, reporting and the Nova knowledge graph ingestion.",
+    "owner_id": "arun_kumar",
+    "lead_id": "david_wilson",
+    "team_id": "team_backend",
+    "status": "in_progress",
+    "health": "at_risk",
+    "start_date": "2026-03-02",
+    "target_date": "2026-12-15",
+    "technologies": ["postgresql", "python", "fastapi", "aws", "redis", "mongodb"],
+    "member_ids": ["arun_kumar", "meera_krishnan", "priya_sharma", "vikram_raj", "sarah_thomas", "david_wilson"]
+  },
+  {
+    "id": "nova",
+    "key": "NOVA",
+    "name": "Project Nova",
+    "description": "Internal AI assistant. Uses LangGraph agents over the FalkorDB company knowledge graph to answer employee questions with sources.",
+    "owner_id": "priya_sharma",
+    "lead_id": "priya_sharma",
+    "team_id": "team_ai_platform",
+    "status": "in_progress",
+    "health": "on_track",
+    "start_date": "2026-05-11",
+    "target_date": "2026-11-30",
+    "technologies": ["langgraph", "python", "falkordb", "fastapi", "postgresql"],
+    "member_ids": ["priya_sharma", "arun_kumar", "meera_krishnan", "david_wilson"]
+  },
+  {
+    "id": "mercury",
+    "key": "MERCURY",
+    "name": "Project Mercury",
+    "description": "Customer-facing analytics dashboard. React + Vite single page app served through the CDN with role-based views.",
+    "owner_id": "rahul_menon",
+    "lead_id": "sarah_thomas",
+    "team_id": "team_frontend",
+    "status": "in_progress",
+    "health": "on_track",
+    "start_date": "2026-04-15",
+    "target_date": "2026-11-01",
+    "technologies": ["react", "typescript", "aws", "redis"],
+    "member_ids": ["rahul_menon", "sarah_thomas", "vikram_raj", "arun_kumar"]
+  },
+  {
+    "id": "orion",
+    "key": "ORION",
+    "name": "Project Orion",
+    "description": "Identity, authentication and billing platform. Replaces the legacy auth service with OIDC and usage-based billing.",
+    "owner_id": "ananya_iyer",
+    "lead_id": "sarah_thomas",
+    "team_id": "team_security",
+    "status": "planning",
+    "health": "on_track",
+    "start_date": "2026-09-01",
+    "target_date": "2027-02-28",
+    "technologies": ["python", "fastapi", "postgresql", "aws", "docker"],
+    "member_ids": ["ananya_iyer", "rahul_menon", "sarah_thomas", "vikram_raj"]
+  }
+]

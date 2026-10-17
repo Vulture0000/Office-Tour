@@ -1,0 +1,172 @@
+[
+  {
+    "id": "ADR-018",
+    "title": "Move Atlas database from MongoDB to PostgreSQL",
+    "status": "Approved",
+    "date": "2026-08-14",
+    "project_id": "atlas",
+    "summary": "Atlas will standardise on PostgreSQL after repeated consistency and query-cost problems with MongoDB.",
+    "reason": "MongoDB could not provide transactional consistency across the reporting aggregates, joins between customer and usage data required expensive application-side stitching, and our managed MongoDB costs grew 3.4x year over year. PostgreSQL gives us ACID transactions, relational joins, mature tooling and a single operational model with the rest of NovaTech.",
+    "alternatives": [
+      {"name": "Stay on MongoDB", "outcome": "Rejected: continued data-stitching cost and no transactional reporting."},
+      {"name": "Adopt a hosted analytics warehouse", "outcome": "Rejected: overkill for operational workloads, new skills required."},
+      {"name": "PostgreSQL on AWS RDS", "outcome": "Selected: relational integrity, existing team expertise, lower cost."}
+    ],
+    "maker_ids": ["arun_kumar", "priya_sharma", "david_wilson"],
+    "supporting_document_ids": ["doc_atlas_migration_design", "doc_atlas_architecture", "doc_meeting_db_architecture_2026_08_12"],
+    "meeting_id": "meet_007",
+    "confidence": 0.94
+  },
+  {
+    "id": "ADR-015",
+    "title": "Use FalkorDB as the graph store for Nova",
+    "status": "Approved",
+    "date": "2026-06-30",
+    "project_id": "nova",
+    "summary": "Nova's company knowledge graph will live in FalkorDB, queried with Cypher for relationship-aware retrieval.",
+    "reason": "Company questions are relationship questions: who owns what, what supports which decision. Vector similarity alone cannot answer multi-hop queries. FalkorDB gives us Redis-compatible low-latency Cypher traversal over people, projects, documents and decisions.",
+    "alternatives": [
+      {"name": "Vector-only RAG", "outcome": "Rejected: cannot answer ownership or decision-trace questions."},
+      {"name": "Neo4j", "outcome": "Considered: heavier operational footprint for a hackathon-scale deployment."},
+      {"name": "FalkorDB", "outcome": "Selected: fast Cypher traversal, Redis protocol, simple deployment."}
+    ],
+    "maker_ids": ["priya_sharma", "david_wilson"],
+    "supporting_document_ids": ["doc_nova_design", "doc_engineering_guidelines"],
+    "meeting_id": "meet_003",
+    "confidence": 0.9
+  },
+  {
+    "id": "ADR-012",
+    "title": "Standardise new web apps on React with Vite and TypeScript",
+    "status": "Approved",
+    "date": "2026-04-28",
+    "project_id": "mercury",
+    "summary": "All new internal and customer web frontends use React, Vite and TypeScript.",
+    "reason": "Vite cut our median dev-server start from 41s to under 1s, TypeScript catches contract drift against the FastAPI layer at compile time, and React keeps hiring and onboarding simple.",
+    "alternatives": [
+      {"name": "Continue with Create React App", "outcome": "Rejected: unmaintained tooling, slow builds."},
+      {"name": "Vue", "outcome": "Rejected: team already productive in React."}
+    ],
+    "maker_ids": ["rahul_menon", "sarah_thomas"],
+    "supporting_document_ids": ["doc_engineering_guidelines", "doc_mercury_requirements"],
+    "meeting_id": "meet_002",
+    "confidence": 0.88
+  },
+  {
+    "id": "ADR-021",
+    "title": "Run production workloads on AWS EKS",
+    "status": "Approved",
+    "date": "2026-07-09",
+    "project_id": "atlas",
+    "summary": "All production services move to Kubernetes on AWS EKS with GitOps deployments.",
+    "reason": "We were running a patchwork of EC2 and Lambda deployments with no uniform rollout story. EKS gives one deployment model, node autoscaling and a single place to enforce policy.",
+    "alternatives": [
+      {"name": "Remain on EC2 + systemd", "outcome": "Rejected: no standard rollout or scaling story."},
+      {"name": "AWS ECS", "outcome": "Rejected: team already has Kubernetes skills from prior roles."}
+    ],
+    "maker_ids": ["vikram_raj", "david_wilson"],
+    "supporting_document_ids": ["doc_platform_runbook", "doc_incident_2026_06_21"],
+    "meeting_id": "meet_005",
+    "confidence": 0.87
+  },
+  {
+    "id": "ADR-009",
+    "title": "Python and FastAPI as the standard backend stack",
+    "status": "Approved",
+    "date": "2026-03-18",
+    "project_id": "atlas",
+    "summary": "New backend services are written in Python 3.12 with FastAPI.",
+    "reason": "FastAPI gives typed request/response models, automatic OpenAPI docs and async I/O with a small footprint. Python is already the language of the data and ML teams, which removes translation layers between data pipelines and services.",
+    "alternatives": [
+      {"name": "Node.js/Express", "outcome": "Rejected: weaker fit with data tooling."},
+      {"name": "Go", "outcome": "Deferred: performance benefits not yet required."}
+    ],
+    "maker_ids": ["david_wilson", "arun_kumar"],
+    "supporting_document_ids": ["doc_engineering_guidelines"],
+    "meeting_id": "meet_001",
+    "confidence": 0.91
+  },
+  {
+    "id": "ADR-023",
+    "title": "Orchestrate Nova agents with LangGraph",
+    "status": "Approved",
+    "date": "2026-09-02",
+    "project_id": "nova",
+    "summary": "Nova's pipeline uses LangGraph to run intent, graph, retrieval, reasoning and action agents.",
+    "reason": "We need inspectable state between steps, deterministic branching on intent, and a place to attach human confirmation before actions. LangGraph's state graph maps directly onto that flow.",
+    "alternatives": [
+      {"name": "Single prompt chain", "outcome": "Rejected: no branching or confirmation points."},
+      {"name": "Custom orchestration", "outcome": "Rejected: reinventing checkpointing and state."}
+    ],
+    "maker_ids": ["priya_sharma", "arun_kumar"],
+    "supporting_document_ids": ["doc_nova_design"],
+    "meeting_id": "meet_009",
+    "confidence": 0.89
+  },
+  {
+    "id": "ADR-006",
+    "title": "Use Redis for caching, sessions and job queues",
+    "status": "Approved",
+    "date": "2026-02-10",
+    "project_id": "atlas",
+    "summary": "Redis is the company standard for ephemeral state.",
+    "reason": "One operational model for cache, session store and background job queue removed three bespoke components.",
+    "alternatives": [
+      {"name": "Separate Memcached + RabbitMQ", "outcome": "Rejected: more moving parts for marginal gain."}
+    ],
+    "maker_ids": ["arun_kumar", "vikram_raj"],
+    "supporting_document_ids": ["doc_engineering_guidelines"],
+    "meeting_id": "meet_001",
+    "confidence": 0.85
+  },
+  {
+    "id": "ADR-025",
+    "title": "Adopt OIDC with a dedicated Auth Gateway in Orion",
+    "status": "Proposed",
+    "date": "2026-10-02",
+    "project_id": "orion",
+    "summary": "All products authenticate through an Orion-managed OIDC gateway instead of per-service sessions.",
+    "reason": "Session logic was duplicated across three services with divergent logout behaviour. A single gateway centralises MFA, RBAC and audit logging.",
+    "alternatives": [
+      {"name": "Continue per-service sessions", "outcome": "Rejected: divergent security behaviour."},
+      {"name": "Third-party IdP only", "outcome": "Under evaluation: retained as a future option."}
+    ],
+    "maker_ids": ["ananya_iyer", "sarah_thomas"],
+    "supporting_document_ids": ["doc_security_policy", "doc_orion_requirements"],
+    "meeting_id": "meet_011",
+    "confidence": 0.78
+  },
+  {
+    "id": "ADR-017",
+    "title": "Replace legacy CI with GitHub Actions",
+    "status": "Approved",
+    "date": "2026-05-20",
+    "project_id": "mercury",
+    "summary": "All repositories move to GitHub Actions with required checks on main.",
+    "reason": "Pipelines live next to the code, matrix builds are cheap, and required checks give us branch protection without a separate CI server.",
+    "alternatives": [
+      {"name": "Self-hosted Jenkins", "outcome": "Rejected: maintenance burden."}
+    ],
+    "maker_ids": ["vikram_raj", "rahul_menon"],
+    "supporting_document_ids": ["doc_platform_runbook"],
+    "meeting_id": "meet_004",
+    "confidence": 0.86
+  },
+  {
+    "id": "ADR-020",
+    "title": "Add read replicas for Atlas reporting workloads",
+    "status": "Approved",
+    "date": "2026-09-18",
+    "project_id": "atlas",
+    "summary": "Reporting queries move to a PostgreSQL read replica to protect transactional latency.",
+    "reason": "After the PostgreSQL migration, dashboard queries contended with transactional writes. A replica isolates reporting with a one-minute tolerated staleness.",
+    "alternatives": [
+      {"name": "Materialised views on primary", "outcome": "Rejected: still contends for I/O."},
+      {"name": "Read replica", "outcome": "Selected: simple, operationally proven."}
+    ],
+    "maker_ids": ["arun_kumar", "meera_krishnan", "david_wilson"],
+    "supporting_document_ids": ["doc_atlas_migration_design", "doc_atlas_status_report"],
+    "meeting_id": "meet_010",
+    "confidence": 0.9
+  }
+]
