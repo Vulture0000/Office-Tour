@@ -58,21 +58,39 @@ export default class OfficeScene extends Phaser.Scene {
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12)
     this.cameras.main.setZoom(1.3)
 
-    this.keys = this.input.keyboard.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,E')
+    if (this.input.keyboard) this.input.keyboard.enabled = false
+
     this.currentRoom = null
     this.nearby = null
     this.speed = 240
+    this.keysDown = new Set()
+    this.interactLatch = false
 
-    const isTyping = () => {
+    this.isTyping = () => {
       const a = document.activeElement
       return !!a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.isContentEditable)
     }
-    this.isTyping = isTyping
 
-    this.input.keyboard.on('keydown', (e) => {
-      if (isTyping()) {
-        e.stopPropagation()
+    this._onKeyDown = (e) => {
+      if (this.isTyping()) return
+      this.keysDown.add(e.code)
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
+        e.preventDefault()
       }
+    }
+    this._onKeyUp = (e) => {
+      this.keysDown.delete(e.code)
+    }
+    this._onBlur = () => this.keysDown.clear()
+
+    window.addEventListener('keydown', this._onKeyDown)
+    window.addEventListener('keyup', this._onKeyUp)
+    window.addEventListener('blur', this._onBlur)
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      window.removeEventListener('keydown', this._onKeyDown)
+      window.removeEventListener('keyup', this._onKeyUp)
+      window.removeEventListener('blur', this._onBlur)
     })
   }
 
@@ -101,14 +119,17 @@ export default class OfficeScene extends Phaser.Scene {
   }
 
   update() {
-    if (!this.player || this.isTyping()) return
+    if (!this.player) return
 
-    const k = this.keys
+    const down = (code) => this.keysDown.has(code)
+    const typing = this.isTyping()
     let vx = 0, vy = 0
-    if (k.LEFT.isDown || k.A.isDown) vx = -1
-    else if (k.RIGHT.isDown || k.D.isDown) vx = 1
-    if (k.UP.isDown || k.W.isDown) vy = -1
-    else if (k.DOWN.isDown || k.S.isDown) vy = 1
+    if (!typing) {
+      if (down('ArrowLeft') || down('KeyA')) vx = -1
+      else if (down('ArrowRight') || down('KeyD')) vx = 1
+      if (down('ArrowUp') || down('KeyW')) vy = -1
+      else if (down('ArrowDown') || down('KeyS')) vy = 1
+    }
     if (vx && vy) { vx *= 0.707; vy *= 0.707 }
 
     this.player.x = Phaser.Math.Clamp(this.player.x + vx * this.speed * this.game.loop.delta / 1000, 20, MAP_W - 20)
@@ -141,12 +162,15 @@ export default class OfficeScene extends Phaser.Scene {
       this.promptText.setPosition(nearest.x, nearest.y - (nearest.r || 12) - 8)
       this.promptText.setText(`Press E — ${nearest.name}`)
       this.promptText.setVisible(true)
-      if (Phaser.Input.Keyboard.JustDown(k.E)) {
+      const eDown = down('KeyE')
+      if (eDown && !this.interactLatch && !typing) {
+        this.interactLatch = true
         this.events.emit('interact', { id: nearest.id, name: nearest.name, type: nearest.type, info: nearest.info, roomId: nearest.roomId })
       }
     } else {
       this.promptText.setVisible(false)
     }
+    if (!down('KeyE')) this.interactLatch = false
 
     if (this.minimap._sx) {
       this.minimap._dot = this.minimap._dot || this.minimap
