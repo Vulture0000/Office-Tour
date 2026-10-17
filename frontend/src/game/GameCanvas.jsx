@@ -1,69 +1,37 @@
 import { useEffect, useRef } from 'react'
 import Phaser from 'phaser'
 import OfficeScene from './scenes/OfficeScene.js'
-import { officeData } from './officeData.js'
 
-export default function GameCanvas({ context, onContextChange, focusTrigger }) {
-  const containerRef = useRef(null)
-  const gameRef = useRef(null)
-  const sceneRef = useRef(null)
+export default function GameCanvas({ onRoomChange, onInteract }) {
+  const ref = useRef(null)
 
   useEffect(() => {
-    const container = containerRef.current
-    if (!container) return
+    if (!ref.current) return
 
-    container.innerHTML = ''
-
-    const config = {
+    const game = new Phaser.Game({
       type: Phaser.AUTO,
-      width: window.innerWidth,
-      height: window.innerHeight,
-      parent: container,
-      backgroundColor: '#0b1020',
-      physics: {
-        default: 'arcade',
-        arcade: {
-          gravity: { y: 0 },
-          debug: false
-        }
-      },
+      parent: ref.current,
+      width: ref.current.clientWidth,
+      height: ref.current.clientHeight,
+      backgroundColor: '#080c18',
+      scale: { mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.CENTER_BOTH },
+      physics: { default: 'arcade', arcade: { gravity: { y: 0 }, debug: false } },
       scene: OfficeScene,
-      scale: {
-        mode: Phaser.Scale.RESIZE,
-        autoCenter: Phaser.Scale.CENTER_BOTH
+    })
+
+    const onReady = () => {
+      const scene = game.scene.getScene('OfficeScene')
+      if (scene) {
+        scene.events.on('room:enter', onRoomChange)
+        scene.events.on('interact', onInteract)
       }
     }
-
-    const game = new Phaser.Game(config)
-    gameRef.current = game
-
-    setTimeout(() => {
-      const scene = game.scene.getScene('OfficeScene')
-      sceneRef.current = scene
-      if (scene) {
-        if (officeData && officeData.rooms && officeData.rooms.length > 0) {
-          scene.start('OfficeScene', { officeData, roomData: officeData.rooms[0] })
-        }
-        scene.events.on('room:enter', (data) => {
-          if (data?.room && onContextChange) {
-            onContextChange({ room: data.room })
-          }
-        })
-        scene.events.on('interact', (data) => {
-          if (data?.obj && onContextChange) {
-            onContextChange({ lastInteraction: data.obj })
-          }
-        })
-      }
-    }, 0)
+    game.events.once(Phaser.Core.Events.READY, onReady)
 
     return () => {
-      if (gameRef.current) {
-        gameRef.current.destroy(true)
-        gameRef.current = null
-      }
+      game.destroy(true)
     }
-  }, [onContextChange])
+  }, [onRoomChange, onInteract])
 
-  return <div ref={containerRef} id="game-container" className="absolute inset-0 h-full w-full" />
+  return <div ref={ref} className="absolute inset-0 h-full w-full" />
 }

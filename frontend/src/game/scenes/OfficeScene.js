@@ -1,151 +1,150 @@
 import Phaser from 'phaser'
+import { rooms, doors, allObjects, spawn, MAP_W, MAP_H } from '../mapData.js'
 
 export default class OfficeScene extends Phaser.Scene {
   constructor() {
     super('OfficeScene')
-    this.player = null
-    this.cursors = null
-    this.walls = null
-    this.doors = null
-    this.interactables = null
-    this.interactText = null
-    this.nearby = null
-    this.speed = 220
-    this.roomData = null
-    this.officeData = null
-    this.infoText = null
-  }
-
-  init(data) {
-    this.officeData = data.officeData || null
-    this.roomData = data.roomData || null
   }
 
   create() {
-    this.cameras.main.setBackgroundColor('#0b1020')
+    this.cameras.main.setBackgroundColor('#080c18')
 
-    this.walls = this.physics.add.staticGroup()
-    this.doors = this.physics.add.staticGroup()
-    this.interactables = this.physics.add.group({ allowGravity: false, immovable: true })
+    const g = this.add.graphics()
 
-    this.buildOffice()
+    for (const r of rooms) {
+      g.fillStyle(r.color, 1)
+      g.fillRoundedRect(r.x, r.y, r.w, r.h, 6)
+      g.lineStyle(3, 0x475569, 0.9)
+      g.strokeRoundedRect(r.x, r.y, r.w, r.h, 6)
 
-    const spawn = this.roomData?.spawn || { x: 400, y: 300 }
-    this.player = this.add.circle(spawn.x, spawn.y, 10, 0x38bdf8)
-    this.physics.add.existing(this.player)
-    if (this.player.body) {
-      this.player.body.setCollideWorldBounds(false)
-      this.player.body.setCircle(8)
-    }
-
-    this.physics.add.collider(this.player, this.walls)
-    this.physics.add.overlap(this.player, this.doors, this.handleDoorOverlap, null, this)
-    this.physics.add.overlap(this.player, this.interactables, this.handleInteractOverlap, null, this)
-
-    this.cursors = this.input.keyboard.createCursorKeys()
-    this.cameras.main.startFollow(this.player, true, 0.15, 0.15)
-    this.cameras.main.setZoom(1.5)
-
-    this.interactText = this.add.text(10, 10, '', {
-      fontSize: '14px',
-      fill: '#e2e8f0',
-      backgroundColor: 'rgba(15, 23, 42, 0.9)',
-      padding: { x: 10, y: 6 }
-    }).setScrollFactor(0).setDepth(200).setVisible(false)
-
-    this.infoText = this.add.text(10, 45, `Room: ${this.roomData?.name || this.roomData?.id || 'lobby'}`, {
-      fontSize: '13px',
-      fill: '#94a3b8',
-      backgroundColor: 'rgba(15, 23, 42, 0.7)',
-      padding: { x: 8, y: 4 }
-    }).setScrollFactor(0).setDepth(200)
-
-    this.events.emit('room:enter', { room: this.roomData?.id || 'lobby' })
-  }
-
-  buildOffice() {
-    if (!this.roomData) return
-    const { layout = [], doors = [], interactables = [] } = this.roomData
-
-    layout.forEach((rect) => {
-      const wall = this.add.rectangle(rect.x + rect.w / 2, rect.y + rect.h / 2, rect.w, rect.h, 0x1e293b)
-      wall.setStrokeStyle(2, 0x475569)
-      this.physics.add.existing(wall, true)
-      this.walls.add(wall)
-    })
-
-    doors.forEach((door) => {
-      const d = this.add.rectangle(door.x + door.w / 2, door.y + door.h / 2, door.w, door.h, 0x22c55e)
-      d.setAlpha(0.8)
-      d.setStrokeStyle(2, 0x86efac)
-      d.setData('target', door.target)
-      d.setData('targetRoom', door.targetRoom || door.target)
-      this.physics.add.existing(d, true)
-      this.doors.add(d)
-    })
-
-    interactables.forEach((obj) => {
-      const color = obj.type === 'npc' ? 0xf59e0b : obj.type === 'item' ? 0x06b6d4 : obj.type === 'document' ? 0xa855f7 : 0x64748b
-      const sprite = this.add.circle(obj.x + (obj.w || 16) / 2, obj.y + (obj.h || 16) / 2, 12, color)
-      sprite.setStrokeStyle(2, 0xfbbf24)
-      sprite.setData('id', obj.id)
-      sprite.setData('name', obj.name)
-      sprite.setData('type', obj.type)
-      this.physics.add.existing(sprite, true)
-      this.interactables.add(sprite)
-      const label = this.add.text(sprite.x - 20, sprite.y + 16, obj.name, {
-        fontSize: '10px',
-        fill: '#cbd5e1',
-        backgroundColor: 'rgba(15,23,42,0.6)',
-        padding: { x: 4, y: 2 }
+      this.add.text(r.x + r.w / 2, r.y + 16, r.name, {
+        fontSize: '14px', fontFamily: 'Inter, sans-serif', color: '#94a3b8',
       }).setOrigin(0.5)
-    })
-  }
-
-  handleDoorOverlap(player, door) {
-    const target = door.getData('targetRoom') || door.getData('target')
-    if (target && this.officeData) {
-      const nextRoom = this.officeData.rooms.find((r) => r.id === target)
-      if (nextRoom) {
-        this.scene.start('OfficeScene', { officeData: this.officeData, roomData: nextRoom })
-      }
     }
+
+    g.fillStyle(0x22c55e, 0.5)
+    for (const d of doors) {
+      g.fillRect(d.x, d.y, d.w, d.h)
+    }
+
+    this.objSprites = []
+    for (const obj of allObjects) {
+      const s = this.add.circle(obj.x, obj.y, obj.r || 12, obj.color || 0x64748b)
+      s.setStrokeStyle(2, 0xffffff, 0.3)
+      const label = this.add.text(obj.x, obj.y + (obj.r || 12) + 6, obj.name, {
+        fontSize: '10px', fontFamily: 'Inter, sans-serif', color: '#cbd5e1',
+        backgroundColor: 'rgba(0,0,0,0.5)', padding: { x: 4, y: 1 },
+      }).setOrigin(0.5, 0)
+      this.objSprites.push({ ...obj, sprite: s, label })
+    }
+
+    this.player = this.add.circle(spawn.x, spawn.y, 10, 0x38bdf8)
+    this.player.setStrokeStyle(2, 0xe0f2fe)
+
+    this.promptText = this.add.text(0, 0, '', {
+      fontSize: '12px', fontFamily: 'Inter, sans-serif', color: '#e2e8f0',
+      backgroundColor: 'rgba(15,23,42,0.92)', padding: { x: 10, y: 5 },
+    }).setOrigin(0.5, 1).setDepth(500).setVisible(false)
+
+    this.hud = this.add.text(10, 10, '', {
+      fontSize: '13px', fontFamily: 'Inter, sans-serif', color: '#94a3b8',
+      backgroundColor: 'rgba(15,23,42,0.8)', padding: { x: 10, y: 5 },
+    }).setScrollFactor(0).setDepth(500)
+
+    this.minimap = this.add.graphics().setScrollFactor(0).setDepth(500)
+    this.drawMinimap()
+
+    this.cameras.main.setBounds(0, 0, MAP_W, MAP_H)
+    this.cameras.main.startFollow(this.player, true, 0.12, 0.12)
+    this.cameras.main.setZoom(1.3)
+
+    this.keys = this.input.keyboard.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,E')
+    this.currentRoom = null
+    this.nearby = null
+    this.speed = 240
   }
 
-  handleInteractOverlap(player, obj) {
-    this.nearby = obj
-    const name = obj.getData('name') || obj.getData('id')
-    const type = obj.getData('type')
-    this.interactText.setText(`[E] Interact • ${name} (${type})`)
-    this.interactText.setVisible(true)
+  drawMinimap() {
+    const mw = 180
+    const mh = Math.round(mw * MAP_H / MAP_W)
+    const ox = 10
+    const oy = 40
+    const sx = mw / MAP_W
+    const sy = mh / MAP_H
+
+    this.minimap.clear()
+    this.minimap.fillStyle(0x0f172a, 0.85)
+    this.minimap.fillRoundedRect(ox - 4, oy - 4, mw + 8, mh + 8, 4)
+
+    for (const r of rooms) {
+      this.minimap.fillStyle(r.color, 0.8)
+      this.minimap.fillRect(ox + r.x * sx, oy + r.y * sy, r.w * sx, r.h * sy)
+    }
+    this.minimap._ox = ox
+    this.minimap._oy = oy
+    this.minimap._sx = sx
+    this.minimap._sy = sy
+    this.minimap._mw = mw
+    this.minimap._mh = mh
   }
 
   update() {
-    if (!this.player || !this.player.body) return
-    this.player.body.setVelocity(0)
+    if (!this.player) return
 
-    const keys = this.input.keyboard
-    if (this.cursors.left.isDown || keys.addKey('A').isDown) {
-      this.player.body.setVelocityX(-this.speed)
-    } else if (this.cursors.right.isDown || keys.addKey('D').isDown) {
-      this.player.body.setVelocityX(this.speed)
-    }
-    if (this.cursors.up.isDown || keys.addKey('W').isDown) {
-      this.player.body.setVelocityY(-this.speed)
-    } else if (this.cursors.down.isDown || keys.addKey('S').isDown) {
-      this.player.body.setVelocityY(this.speed)
-    }
+    const k = this.keys
+    let vx = 0, vy = 0
+    if (k.LEFT.isDown || k.A.isDown) vx = -1
+    else if (k.RIGHT.isDown || k.D.isDown) vx = 1
+    if (k.UP.isDown || k.W.isDown) vy = -1
+    else if (k.DOWN.isDown || k.S.isDown) vy = 1
+    if (vx && vy) { vx *= 0.707; vy *= 0.707 }
 
-    if (this.interactText) {
-      const distance = this.nearby ? Phaser.Math.Distance.Between(this.player.x, this.player.y, this.nearby.x, this.nearby.y) : Infinity
-      if (!this.nearby || distance > 70) {
-        this.nearby = null
-        this.interactText.setVisible(false)
+    this.player.x = Phaser.Math.Clamp(this.player.x + vx * this.speed * this.game.loop.delta / 1000, 20, MAP_W - 20)
+    this.player.y = Phaser.Math.Clamp(this.player.y + vy * this.speed * this.game.loop.delta / 1000, 20, MAP_H - 20)
+
+    const px = this.player.x
+    const py = this.player.y
+
+    let room = null
+    for (const r of rooms) {
+      if (px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h) {
+        room = r
+        break
       }
     }
+    if (room && room.id !== this.currentRoom) {
+      this.currentRoom = room.id
+      this.events.emit('room:enter', { room: room.id, name: room.name, desc: room.desc })
+    }
+    this.hud.setText(`Room: ${room ? room.name : '—'}`)
 
-    if (this.nearby && Phaser.Input.Keyboard.JustDown(keys.addKey('E'))) {
-      this.events.emit('interact', { obj: this.nearby.data.values })
+    let nearest = null
+    let minD = 70
+    for (const o of this.objSprites) {
+      const d = Phaser.Math.Distance.Between(px, py, o.x, o.y)
+      if (d < minD) { minD = d; nearest = o }
+    }
+
+    if (nearest) {
+      this.promptText.setPosition(nearest.x, nearest.y - (nearest.r || 12) - 8)
+      this.promptText.setText(`Press E — ${nearest.name}`)
+      this.promptText.setVisible(true)
+      if (Phaser.Input.Keyboard.JustDown(k.E)) {
+        this.events.emit('interact', { id: nearest.id, name: nearest.name, type: nearest.type, info: nearest.info, roomId: nearest.roomId })
+      }
+    } else {
+      this.promptText.setVisible(false)
+    }
+
+    if (this.minimap._sx) {
+      this.minimap._dot = this.minimap._dot || this.minimap
+      if (!this.minimapDot) {
+        this.minimapDot = this.add.circle(0, 0, 3, 0x38bdf8).setScrollFactor(0).setDepth(501)
+      }
+      this.minimapDot.setPosition(
+        this.minimap._ox + px * this.minimap._sx,
+        this.minimap._oy + py * this.minimap._sy
+      )
     }
   }
 }
