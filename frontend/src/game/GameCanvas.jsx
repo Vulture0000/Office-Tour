@@ -16,10 +16,10 @@ export default function GameCanvas({ context, onContextChange, focusTrigger }) {
 
     const config = {
       type: Phaser.AUTO,
-      width: container.clientWidth || 800,
-      height: container.clientHeight || 600,
+      width: window.innerWidth,
+      height: window.innerHeight,
       parent: container,
-      backgroundColor: '#020617',
+      backgroundColor: '#0b1020',
       physics: {
         default: 'arcade',
         arcade: {
@@ -27,18 +27,15 @@ export default function GameCanvas({ context, onContextChange, focusTrigger }) {
           debug: false
         }
       },
-      scene: OfficeScene
+      scene: OfficeScene,
+      scale: {
+        mode: Phaser.Scale.RESIZE,
+        autoCenter: Phaser.Scale.CENTER_BOTH
+      }
     }
 
     const game = new Phaser.Game(config)
     gameRef.current = game
-
-    const resize = () => {
-      if (game && game.canvas && container) {
-        game.scale.resize(container.clientWidth, container.clientHeight)
-      }
-    }
-    window.addEventListener('resize', resize)
 
     setTimeout(() => {
       const scene = game.scene.getScene('OfficeScene')
@@ -61,7 +58,6 @@ export default function GameCanvas({ context, onContextChange, focusTrigger }) {
     }, 0)
 
     return () => {
-      window.removeEventListener('resize', resize)
       if (gameRef.current) {
         gameRef.current.destroy(true)
         gameRef.current = null
